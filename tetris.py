@@ -3,12 +3,12 @@ from OpenGL.GL import *
 import random
 
 # Constantes
-ROWS, COLS = 20, 10
-BLOCK_SIZE = 30
-WINDOW_WIDTH, WINDOW_HEIGHT = COLS * BLOCK_SIZE, ROWS * BLOCK_SIZE
+LINHAS, COLUNAS = 20, 10
+TAMANHO_BLOCO = 30
+LARGURA_JANELA, ALTURA_JANELA = COLUNAS * TAMANHO_BLOCO, LINHAS * TAMANHO_BLOCO
 
-# Peças Tetris (formas e rotações)
-TETROMINOS = {
+# Peças do Tetris (formatos)
+PECAS_TETRIS = {
     'I': [[1, 1, 1, 1]],
     'O': [[1, 1],
           [1, 1]],
@@ -25,119 +25,127 @@ TETROMINOS = {
 }
 
 # Estado do jogo
-grid = [[0] * COLS for _ in range(ROWS)]
-current_piece = None
-piece_pos = [0, 3]  # linha, coluna
+grade = [[0] * COLUNAS for _ in range(LINHAS)]
+peca_atual = None
+posicao_peca = [0, 3]  # linha, coluna
 
-def draw_block(x, y, color):
-    glColor3fv(color)
+def desenhar_bloco(x, y, cor):
+    glColor3fv(cor)
     glBegin(GL_QUADS)
     glVertex2f(x, y)
-    glVertex2f(x + BLOCK_SIZE, y)
-    glVertex2f(x + BLOCK_SIZE, y + BLOCK_SIZE)
-    glVertex2f(x, y + BLOCK_SIZE)
+    glVertex2f(x + TAMANHO_BLOCO, y)
+    glVertex2f(x + TAMANHO_BLOCO, y + TAMANHO_BLOCO)
+    glVertex2f(x, y + TAMANHO_BLOCO)
     glEnd()
 
-def draw_grid():
-    for row in range(ROWS):
-        for col in range(COLS):
-            if grid[row][col]:
-                draw_block(col * BLOCK_SIZE, (ROWS - row - 1) * BLOCK_SIZE, (0.8, 0.2, 0.2))
+def desenhar_grade():
+    for linha in range(LINHAS):
+        for coluna in range(COLUNAS):
+            if grade[linha][coluna]:
+                desenhar_bloco(coluna * TAMANHO_BLOCO, (LINHAS - linha - 1) * TAMANHO_BLOCO, (0.8, 0.2, 0.2))
 
-def draw_piece():
-    if not current_piece:
+def desenhar_peca():
+    if not peca_atual:
         return
-    shape = TETROMINOS[current_piece['type']]
-    for i, row in enumerate(shape):
-        for j, val in enumerate(row):
+    forma = peca_atual['forma']
+    for i, linha in enumerate(forma):
+        for j, val in enumerate(linha):
             if val:
-                draw_block((piece_pos[1] + j) * BLOCK_SIZE, (ROWS - piece_pos[0] - i - 1) * BLOCK_SIZE, (0.2, 0.8, 0.2))
+                desenhar_bloco((posicao_peca[1] + j) * TAMANHO_BLOCO, (LINHAS - posicao_peca[0] - i - 1) * TAMANHO_BLOCO, (0.2, 0.8, 0.2))
 
-def spawn_piece():
-    global current_piece, piece_pos
-    piece_type = random.choice(list(TETROMINOS.keys()))
-    current_piece = {'type': piece_type}
-    piece_pos[:] = [0, 3]
+def gerar_nova_peca():
+    global peca_atual, posicao_peca
+    tipo = random.choice(list(PECAS_TETRIS.keys()))
+    forma = PECAS_TETRIS[tipo]
+    peca_atual = {'tipo': tipo, 'forma': forma}
+    posicao_peca[:] = [0, 3]
 
-def piece_fits(new_pos):
-    shape = TETROMINOS[current_piece['type']]
-    for i, row in enumerate(shape):
-        for j, val in enumerate(row):
+def rotacionar(matriz):
+    return [list(linha) for linha in zip(*matriz[::-1])]
+
+def peca_cabe(nova_pos, nova_forma):
+    for i, linha in enumerate(nova_forma):
+        for j, val in enumerate(linha):
             if val:
-                r, c = new_pos[0] + i, new_pos[1] + j
-                if r >= ROWS or c < 0 or c >= COLS or (r >= 0 and grid[r][c]):
+                r, c = nova_pos[0] + i, nova_pos[1] + j
+                if r >= LINHAS or c < 0 or c >= COLUNAS or (r >= 0 and grade[r][c]):
                     return False
     return True
 
-def fix_piece():
-    shape = TETROMINOS[current_piece['type']]
-    for i, row in enumerate(shape):
-        for j, val in enumerate(row):
+def fixar_peca():
+    forma = peca_atual['forma']
+    for i, linha in enumerate(forma):
+        for j, val in enumerate(linha):
             if val:
-                r, c = piece_pos[0] + i, piece_pos[1] + j
-                grid[r][c] = 1
-    clear_lines()
-    spawn_piece()
+                r, c = posicao_peca[0] + i, posicao_peca[1] + j
+                grade[r][c] = 1
+    limpar_linhas()
+    gerar_nova_peca()
 
-def clear_lines():
-    global grid
-    grid = [row for row in grid if not all(row)]
-    while len(grid) < ROWS:
-        grid.insert(0, [0] * COLS)
+def limpar_linhas():
+    global grade
+    grade = [linha for linha in grade if not all(linha)]
+    while len(grade) < LINHAS:
+        grade.insert(0, [0] * COLUNAS)
 
-def update():
-    new_pos = [piece_pos[0] + 1, piece_pos[1]]
-    if piece_fits(new_pos):
-        piece_pos[0] += 1
+def atualizar():
+    nova_pos = [posicao_peca[0] + 1, posicao_peca[1]]
+    if peca_cabe(nova_pos, peca_atual['forma']):
+        posicao_peca[0] += 1
     else:
-        fix_piece()
+        fixar_peca()
 
-def key_callback(window, key, scancode, action, mods):
-    if action != glfw.PRESS:
+def tratar_teclas(janela, tecla, scancode, acao, mods):
+    if acao != glfw.PRESS:
         return
-    if key == glfw.KEY_LEFT:
-        new_pos = [piece_pos[0], piece_pos[1] - 1]
-        if piece_fits(new_pos):
-            piece_pos[1] -= 1
-    elif key == glfw.KEY_RIGHT:
-        new_pos = [piece_pos[0], piece_pos[1] + 1]
-        if piece_fits(new_pos):
-            piece_pos[1] += 1
-    elif key == glfw.KEY_DOWN:
-        update()
 
-def main():
+    if tecla == glfw.KEY_LEFT:
+        nova_pos = [posicao_peca[0], posicao_peca[1] - 1]
+        if peca_cabe(nova_pos, peca_atual['forma']):
+            posicao_peca[1] -= 1
+    elif tecla == glfw.KEY_RIGHT:
+        nova_pos = [posicao_peca[0], posicao_peca[1] + 1]
+        if peca_cabe(nova_pos, peca_atual['forma']):
+            posicao_peca[1] += 1
+    elif tecla == glfw.KEY_DOWN:
+        atualizar()
+    elif tecla == glfw.KEY_UP:
+        nova_forma = rotacionar(peca_atual['forma'])
+        if peca_cabe(posicao_peca, nova_forma):
+            peca_atual['forma'] = nova_forma
+
+def principal():
     if not glfw.init():
         return
-    window = glfw.create_window(WINDOW_WIDTH, WINDOW_HEIGHT, "Tetris 2D", None, None)
-    if not window:
+    janela = glfw.create_window(LARGURA_JANELA, ALTURA_JANELA, "Tetris 2D", None, None)
+    if not janela:
         glfw.terminate()
         return
-    glfw.make_context_current(window)
-    glfw.set_key_callback(window, key_callback)
+    glfw.make_context_current(janela)
+    glfw.set_key_callback(janela, tratar_teclas)
 
     glMatrixMode(GL_PROJECTION)
     glLoadIdentity()
-    glOrtho(0, WINDOW_WIDTH, 0, WINDOW_HEIGHT, -1, 1)
+    glOrtho(0, LARGURA_JANELA, 0, ALTURA_JANELA, -1, 1)
     glMatrixMode(GL_MODELVIEW)
 
-    spawn_piece()
-    last_time = glfw.get_time()
-    speed = 0.5
+    gerar_nova_peca()
+    tempo_anterior = glfw.get_time()
+    velocidade = 0.5
 
-    while not glfw.window_should_close(window):
-        now = glfw.get_time()
-        if now - last_time > speed:
-            update()
-            last_time = now
+    while not glfw.window_should_close(janela):
+        agora = glfw.get_time()
+        if agora - tempo_anterior > velocidade:
+            atualizar()
+            tempo_anterior = agora
 
         glClear(GL_COLOR_BUFFER_BIT)
-        draw_grid()
-        draw_piece()
-        glfw.swap_buffers(window)
+        desenhar_grade()
+        desenhar_peca()
+        glfw.swap_buffers(janela)
         glfw.poll_events()
 
     glfw.terminate()
 
 if __name__ == "__main__":
-    main()
+    principal()
