@@ -11,23 +11,24 @@ LARGURA_JANELA, ALTURA_JANELA = COLUNAS * TAMANHO_BLOCO, LINHAS * TAMANHO_BLOCO
 PECAS_TETRIS = {
     'I': [[1, 1, 1, 1]],
     'O': [[1, 1],
-          [1, 1]],
+        [1, 1]],
     'T': [[0, 1, 0],
-          [1, 1, 1]],
+        [1, 1, 1]],
     'S': [[0, 1, 1],
-          [1, 1, 0]],
+        [1, 1, 0]],
     'Z': [[1, 1, 0],
-          [0, 1, 1]],
+        [0, 1, 1]],
     'J': [[1, 0, 0],
-          [1, 1, 1]],
+        [1, 1, 1]],
     'L': [[0, 0, 1],
-          [1, 1, 1]]
+        [1, 1, 1]]
 }
 
 # Estado do jogo
 grade = [[0] * COLUNAS for _ in range(LINHAS)]
 peca_atual = None
 posicao_peca = [0, 3]  # linha, coluna
+
 
 def desenhar_bloco(x, y, cor):
     glColor3fv(cor)
@@ -59,6 +60,9 @@ def gerar_nova_peca():
     forma = PECAS_TETRIS[tipo]
     peca_atual = {'tipo': tipo, 'forma': forma}
     posicao_peca[:] = [0, 3]
+
+
+
 
 def rotacionar(matriz):
     return [list(linha) for linha in zip(*matriz[::-1])]
