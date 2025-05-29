@@ -19,8 +19,9 @@ pygame.mixer.Sound.play(som_fundo, loops=-1)
 LINHAS, COLUNAS = 20, 10
 TAMANHO_BLOCO = 30
 LARGURA_JANELA, ALTURA_JANELA = COLUNAS * TAMANHO_BLOCO * 2, LINHAS * TAMANHO_BLOCO
+jogo_ativo = True
 
-# Peças e cores
+# Peças
 PEÇAS_TETRIS = {
     'I': [[1, 1, 1, 1]],
     'O': [[1, 1], [1, 1]],
@@ -31,38 +32,56 @@ PEÇAS_TETRIS = {
     'L': [[0, 0, 1], [1, 1, 1]]
 }
 
-CORES_PEÇAS = {
-    'I': (0.0, 1.0, 1.0),
-    'O': (1.0, 1.0, 0.0),
-    'T': (0.6, 0.0, 0.6),
-    'S': (0.0, 1.0, 0.0),
-    'Z': (1.0, 0.0, 0.0),
-    'J': (0.0, 0.0, 1.0),
-    'L': (1.0, 0.5, 0.0),
-}
+# Cores diferentes para cada jogador
+CORES_POR_JOGADOR = [
+    {  # Jogador 1
+        'I': (0.0, 1.0, 1.0),
+        'O': (1.0, 1.0, 0.0),
+        'T': (0.0, 1.0, 0.0),
+        'S': (0.0, 0.5, 1.0),
+        'Z': (1.0, 0.0, 0.0),
+        'J': (0.0, 0.0, 1.0),
+        'L': (1.0, 0.5, 0.0),
+    },
+    {  # Jogador 2
+        'I': (0.2, 0.8, 1.0),
+        'O': (1.0, 0.8, 0.3),
+        'T': (0.8, 0.0, 0.8),
+        'S': (0.0, 1.0, 0.6),
+        'Z': (1.0, 0.4, 0.4),
+        'J': (0.4, 0.4, 1.0),
+        'L': (1.0, 0.7, 0.3),
+    }
+]
 
 def rotacionar(formato):
     return [list(linha) for linha in zip(*formato[::-1])]
 
 class Jogador:
-    def __init__(self, deslocamento_x, teclas):
+    def __init__(self, deslocamento_x, teclas, id_jogador):
         self.grade = [[None] * COLUNAS for _ in range(LINHAS)]
         self.peca_atual = None
         self.pos_peca = [0, 3]
         self.teclas = teclas
         self.deslocamento_x = deslocamento_x
+        self.id_jogador = id_jogador
         self.gerar_peca()
 
     def gerar_peca(self):
+        global jogo_ativo
         tipo = random.choice(list(PEÇAS_TETRIS.keys()))
         formato = PEÇAS_TETRIS[tipo]
-        cor = CORES_PEÇAS[tipo]
+        cor = CORES_POR_JOGADOR[self.id_jogador][tipo]
         nova_pos = [0, 3]
 
-        if not self.peca_cabe(nova_pos, formato):
-            print("🎮 GAME OVER!")
+        if not self.peca_cabe(nova_pos, formato) and jogo_ativo:
+            jogo_ativo = False
             pygame.mixer.Sound.play(som_gameover)
-            self.grade = [[None] * COLUNAS for _ in range(LINHAS)]
+            perdedor = f"Jogador {self.id_jogador + 1}"
+            vencedor = f"Jogador {2 if self.id_jogador == 0 else 1}"
+            print(f"\n🎮 GAME OVER! {perdedor} perdeu!")
+            print(f"🏆 {vencedor.upper()} VENCEU!")
+            glfw.set_window_should_close(glfw.get_current_context(), True)
             return
 
         self.peca_atual = {'tipo': tipo, 'formato': formato, 'cor': cor}
@@ -182,7 +201,6 @@ def tecla_callback(janela, tecla, scancode, acao, mods):
 def principal():
     if not glfw.init():
         return
-    #glutInit()
     janela = glfw.create_window(LARGURA_JANELA, ALTURA_JANELA, "Tetris Multijogador Local", None, None)
     if not janela:
         glfw.terminate()
@@ -205,8 +223,6 @@ def principal():
                 jogador.atualizar()
             tempo_anterior = agora
 
-        #glClearColor(0, 0, 0, 1)
-        # Animação de cor de fundo
         tempo = glfw.get_time()
         r = (math.sin(tempo * 0.4) + 1) / 2 * 0.3 + 0.1
         g = (math.sin(tempo * 0.6 + 2) + 1) / 2 * 0.3 + 0.1
@@ -214,8 +230,6 @@ def principal():
         glClearColor(r, g, b, 1)
 
         glClear(GL_COLOR_BUFFER_BIT)
-
-        tempo = glfw.get_time()
         brilho = (math.sin(tempo * 2) + 1) / 2 * 0.4 + 0.2
         glColor3f(brilho, brilho, brilho)
         desenhar_grade_animada()
@@ -245,8 +259,8 @@ teclas_jogador2 = {
 }
 
 jogadores = [
-    Jogador(0, teclas_jogador1),
-    Jogador(COLUNAS * TAMANHO_BLOCO, teclas_jogador2)
+    Jogador(0, teclas_jogador1, 0),
+    Jogador(COLUNAS * TAMANHO_BLOCO, teclas_jogador2, 1)
 ]
 
 if __name__ == "__main__":
