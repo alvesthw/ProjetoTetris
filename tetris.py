@@ -60,7 +60,7 @@ teclas_jogador2 = {
     'esquerda': glfw.KEY_LEFT,
     'direita': glfw.KEY_RIGHT,
     'baixo': glfw.KEY_DOWN,
-    'rotacionar': glfw.KEY_UP
+    'rotacionar': glfw.KEY_UP # para rotacionar
 }
 
 # Initialize pygame and sounds
